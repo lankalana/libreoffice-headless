@@ -1,30 +1,119 @@
-name: Publish docker container
+name: Build and publish docker container
+
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
+    inputs:
+      libre-office-version:
+        description: 'LibreOffice version to build'
+        required: true
+        type: string
 
 jobs:
-  publish:
+  download-source:
     runs-on: ubuntu-latest
-    name: Publish to Docker Hub
+    name: Download source code
+    env:
+      LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
-      - uses: actions/checkout@v4
-        
+      - name: Download source code
+        run: wget $LIBRE_URL -O libre.tar.xz
+      - name: Extract source code
+        run: mkdir libre && tar -xJf libre.tar.xz -C ./libre --strip-components=1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libre-${{inputs.libre-office-version}}-source
+          path: ./libre
+          retention-days: 1
+          compression-level: 0
+
+  build-amd64:
+    name: Build amd64 version
+    runs-on: ubuntu-24.04
+    needs: download-source
+    steps:
+      - name: Download source code
+        uses: actions/download-artifact@v4
+        with:
+          name: libre-${{inputs.libre-office-version}}-source
+          path: ./
+      - name: Install dependencies
+        run: | 
+          sudo apt update
+          sudo apt install -y git build-essential zip ccache junit4 libkrb5-dev nasm graphviz python3 python3-dev python3-setuptools qtbase5-dev libkf5coreaddons-dev libkf5i18n-dev libkf5config-dev libkf5windowsystem-dev libkf5kio-dev libqt5x11extras5-dev autoconf libcups2-dev libfontconfig1-dev gperf libxslt1-dev xsltproc libxml2-utils libxrandr-dev libx11-dev bison flex libgtk-3-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev ant ant-optional libnss3-dev libavahi-client-dev libxt-dev
+      - name: Make sure gcc 12 is used
+        run: |
+          sudo apt install -y gcc-12 g++-12
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
+      - name: Generate config
+        run: ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format
+      - name: Build
+        run: make
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libre-amd64
+          path: instdir
+          retention-days: 1
+          compression-level: 0
+
+  build-arm64:
+    name: Build arm64 version
+    runs-on: ubuntu-24.04-arm
+    needs: download-source
+    steps:
+      - name: Download source code
+        uses: actions/download-artifact@v4
+        with:
+          name: libre-${{inputs.libre-office-version}}-source
+          path: ./
+      - name: Install dependencies
+        run: | 
+          sudo apt update
+          sudo apt install -y git build-essential zip ccache junit4 libkrb5-dev nasm graphviz python3 python3-dev python3-setuptools qtbase5-dev libkf5coreaddons-dev libkf5i18n-dev libkf5config-dev libkf5windowsystem-dev libkf5kio-dev libqt5x11extras5-dev autoconf libcups2-dev libfontconfig1-dev gperf libxslt1-dev xsltproc libxml2-utils libxrandr-dev libx11-dev bison flex libgtk-3-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev ant ant-optional libnss3-dev libavahi-client-dev libxt-dev
+      - name: Make sure gcc 12 is used
+        run: |
+          sudo apt install -y gcc-12 g++-12
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
+      - name: Generate config
+        run: ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format
+      - name: Build
+        run: make
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libre-arm64
+          path: instdir
+          retention-days: 1
+          compression-level: 0
+
+  build-docker-container:
+    runs-on: ubuntu-latest
+    name: Build and publish docker container
+    needs: [build-amd64, build-arm64]
+    steps:
+      - name: Download amd64 build result
+        uses: actions/download-artifact@v4
+        with:
+          name: libre-amd64
+          path: ./libre-amd64
+      - name: Download arm64 build result
+        uses: actions/download-artifact@v4
+        with:
+          name: libre-arm64
+          path: ./libre-arm64
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-          
-
       - name: Load Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -35,8 +124,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=edge
-
-      - name: Push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           push: true
