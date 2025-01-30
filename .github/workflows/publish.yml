@@ -20,7 +20,7 @@ jobs:
       - name: Extract source code
         run: mkdir libre && tar -xJf libre.tar.xz -C ./libre --strip-components=1
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: pyTooling/upload-artifact@v4
         with:
           name: libre-${{inputs.libre-office-version}}-source
           path: ./libre
@@ -33,7 +33,7 @@ jobs:
     needs: download-source
     steps:
       - name: Download source code
-        uses: actions/download-artifact@v4
+        uses: pyTooling/download-artifact@v4
         with:
           name: libre-${{inputs.libre-office-version}}-source
           path: ./
@@ -51,7 +51,7 @@ jobs:
         run: make
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: pyTooling/upload-artifact@v4
         with:
           name: libre-amd64
           path: instdir
@@ -64,7 +64,7 @@ jobs:
     needs: download-source
     steps:
       - name: Download source code
-        uses: actions/download-artifact@v4
+        uses: pyTooling/download-artifact@v4
         with:
           name: libre-${{inputs.libre-office-version}}-source
           path: ./
@@ -82,7 +82,7 @@ jobs:
         run: make
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: pyTooling/upload-artifact@v4
         with:
           name: libre-arm64
           path: instdir
@@ -95,12 +95,12 @@ jobs:
     needs: [build-amd64, build-arm64]
     steps:
       - name: Download amd64 build result
-        uses: actions/download-artifact@v4
+        uses: pyTooling/download-artifact@v4
         with:
           name: libre-amd64
           path: ./libre-amd64
       - name: Download arm64 build result
-        uses: actions/download-artifact@v4
+        uses: pyTooling/download-artifact@v4
         with:
           name: libre-arm64
           path: ./libre-arm64
