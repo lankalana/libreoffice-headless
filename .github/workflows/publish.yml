@@ -68,6 +68,7 @@ jobs:
     name: Build and publish docker container
     needs: [build-amd64, build-arm64]
     steps:
+      - uses: actions/checkout@v4
       - name: Download amd64 build result
         uses: pyTooling/download-artifact@v4
         with:
