@@ -1,21 +1,22 @@
 name: Build and publish docker container
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
+    inputs:
+      libre-office-version:
+        description: 'LibreOffice version to build'
+        required: true
+        type: string
 
 jobs:
   build-amd64:
     name: Build amd64 version
     runs-on: ubuntu-24.04
+    env:
+      LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
-      - name: Load version number
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Download source code
-        run: wget https://downloadarchive.documentfoundation.org/libreoffice/old/${VERSION}/src/libreoffice-${VERSION}.tar.xz -O libre.tar.xz
+        run: wget $LIBRE_URL -O libre.tar.xz
       - name: Extract source code
         run: tar -xJf libre.tar.xz -C ./ --strip-components=1
       - name: Install dependencies
@@ -38,13 +39,11 @@ jobs:
   build-arm64:
     name: Build arm64 version
     runs-on: ubuntu-24.04-arm
+    env:
+      LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
-      - name: Load version number
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: Download source code
-        run: wget https://downloadarchive.documentfoundation.org/libreoffice/old/${VERSION}/src/libreoffice-${VERSION}.tar.xz -O libre.tar.xz
+        run: wget $LIBRE_URL -O libre.tar.xz
       - name: Extract source code
         run: tar -xJf libre.tar.xz -C ./ --strip-components=1
       - name: Install dependencies
@@ -95,10 +94,9 @@ jobs:
         with:
           images: ${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=edge
+            type=match,pattern=\d+,value=${{inputs.libre-office-version}}
+            type=match,pattern=\d+\.\d+,value=${{inputs.libre-office-version}}
+            type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.libre-office-version}}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
