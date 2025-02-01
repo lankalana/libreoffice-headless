@@ -15,6 +15,7 @@ jobs:
     env:
       LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
+      - uses: actions/checkout@v4
       - name: Download source code
         run: wget $LIBRE_URL -O libre.tar.xz
       - name: Extract source code
@@ -27,14 +28,18 @@ jobs:
         run: ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format
       - name: Build
         run: make
-
-      - name: Upload artifact
-        uses: pyTooling/upload-artifact@v4
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
         with:
-          name: libre-amd64
-          path: instdir
-          retention-days: 1
-          compression-level: 0
+          platforms: linux/amd64
+          file: Dockerfile.partial
+          tags: libre-amd64
+          outputs: type=docker,dest=/tmp/libre-amd64.tar
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libre-amd64:${{ inputs.libre-office-version }}
+          path: /tmp/libre-amd64.tar
 
   build-arm64:
     name: Build arm64 version
@@ -42,6 +47,7 @@ jobs:
     env:
       LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
+      - uses: actions/checkout@v4
       - name: Download source code
         run: wget $LIBRE_URL -O libre.tar.xz
       - name: Extract source code
@@ -54,14 +60,18 @@ jobs:
         run: ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format
       - name: Build
         run: make
-
-      - name: Upload artifact
-        uses: pyTooling/upload-artifact@v4
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
         with:
-          name: libre-arm64
-          path: instdir
-          retention-days: 1
-          compression-level: 0
+          platforms: linux/arm64
+          file: Dockerfile.partial
+          tags: libre-arm64
+          outputs: type=docker,dest=/tmp/libre-arm64.tar
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libre-arm64:${{ inputs.libre-office-version }}
+          path: /tmp/libre-arm64.tar
 
   build-docker-container:
     runs-on: ubuntu-latest
@@ -69,16 +79,21 @@ jobs:
     needs: [build-amd64, build-arm64]
     steps:
       - uses: actions/checkout@v4
-      - name: Download amd64 build result
-        uses: pyTooling/download-artifact@v4
+      - name: Download amd64 image
+        uses: actions/download-artifact@v4
         with:
-          name: libre-amd64
-          path: ./libre-amd64
-      - name: Download arm64 build result
-        uses: pyTooling/download-artifact@v4
+          name: libre-amd64:${{ inputs.libre-office-version }}
+          path: /tmp
+      - name: Download arm64 image
+        uses: actions/download-artifact@v4
         with:
-          name: libre-arm64
-          path: ./libre-arm64
+          name: libre-arm64:${{ inputs.libre-office-version }}
+          path: /tmp
+
+      - name: Load amd64 image
+        run: docker load --input /tmp/libre-amd64.tar
+      - name: Load arm64 image
+        run: docker load --input /tmp/libre-arm64.tar
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
