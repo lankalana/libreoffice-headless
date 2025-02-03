@@ -31,6 +31,7 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
+          context: .
           platforms: linux/amd64
           file: Dockerfile.partial
           tags: libre-amd64
@@ -38,7 +39,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libre-amd64:${{ inputs.libre-office-version }}
+          name: libre-amd64-${{ inputs.libre-office-version }}
           path: /tmp/libre-amd64.tar
 
   build-arm64:
@@ -63,6 +64,7 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
+          context: .
           platforms: linux/arm64
           file: Dockerfile.partial
           tags: libre-arm64
@@ -70,7 +72,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libre-arm64:${{ inputs.libre-office-version }}
+          name: libre-arm64-${{ inputs.libre-office-version }}
           path: /tmp/libre-arm64.tar
 
   build-docker-container:
@@ -82,12 +84,12 @@ jobs:
       - name: Download amd64 image
         uses: actions/download-artifact@v4
         with:
-          name: libre-amd64:${{ inputs.libre-office-version }}
+          name: libre-amd64-${{ inputs.libre-office-version }}
           path: /tmp
       - name: Download arm64 image
         uses: actions/download-artifact@v4
         with:
-          name: libre-arm64:${{ inputs.libre-office-version }}
+          name: libre-arm64-${{ inputs.libre-office-version }}
           path: /tmp
 
       - name: Load amd64 image
