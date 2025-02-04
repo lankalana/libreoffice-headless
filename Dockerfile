@@ -1,3 +1,3 @@
-FROM libre-$TARGETARCH
+FROM lankalana/libreoffice-headless-$TARGETARCH
 WORKDIR /
 ARG TARGETARCH
