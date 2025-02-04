@@ -18,7 +18,6 @@ jobs:
   build-docker-container:
     runs-on: ubuntu-latest
     name: Build and publish docker container
-    needs: [build-amd64, build-arm64]
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -36,14 +35,16 @@ jobs:
         with:
           images: ${{ github.repository }}
           tags: |
-            type=match,pattern=\d+,value=${{inputs.libre-office-version}}
-            type=match,pattern=\d+\.\d+,value=${{inputs.libre-office-version}}
-            type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.libre-office-version}}
+            type=match,pattern=\d+,value=${{inputs.image-version}}
+            type=match,pattern=\d+\.\d+,value=${{inputs.image-version}}
+            type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.image-version}}
+            type=raw,value=${{inputs.image-version}}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           push: true
           platforms: linux/amd64,linux/arm64
+          build-args: SOURCE_VERSION=${{inputs.image-version}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

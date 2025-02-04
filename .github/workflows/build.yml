@@ -46,9 +46,12 @@ jobs:
             type=match,pattern=\d+,value=${{inputs.libre-office-version}}
             type=match,pattern=\d+\.\d+,value=${{inputs.libre-office-version}}
             type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.libre-office-version}}
+            type=raw,value=${{inputs.libre-office-version}}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          context: .
+          file: Dockerfile.partial
           push: true
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
@@ -91,9 +94,12 @@ jobs:
             type=match,pattern=\d+,value=${{inputs.libre-office-version}}
             type=match,pattern=\d+\.\d+,value=${{inputs.libre-office-version}}
             type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.libre-office-version}}
+            type=raw,value=${{inputs.libre-office-version}}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          context: .
+          file: Dockerfile.partial
           push: true
           platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
@@ -102,7 +108,8 @@ jobs:
           cache-to: type=gha,mode=max
 
   build-docker-container:
-    runs-on: ubuntu-latest
     name: Build and publish merged docker container
     needs: [build-amd64, build-arm64]
     uses: ./.github/workflows/merge.yml
+    with:
+      image-version: ${{inputs.libre-office-version}}

@@ -1,3 +1,4 @@
-FROM lankalana/libreoffice-headless-$TARGETARCH
+FROM lankalana/libreoffice-headless-${TARGETARCH}:${SOURCE_VERSION}
 WORKDIR /
 ARG TARGETARCH
+ARG SOURCE_VERSION
