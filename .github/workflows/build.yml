@@ -7,29 +7,22 @@ on:
         description: 'LibreOffice version to build'
         required: true
         type: string
+      builder-image:
+        description: 'Base image to use for building'
+        required: true
+        type: string
+      image-version-suffix:
+        description: 'Suffix to append to the image version'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   build-amd64:
     name: Build and publish amd64 version
     runs-on: ubuntu-24.04
-    env:
-      LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Download source code
-        run: wget $LIBRE_URL -O libre.tar.xz
-      - name: Extract source code
-        run: tar -xJf libre.tar.xz -C ./ --strip-components=1
-      - name: Install dependencies
-        run: | 
-          sudo apt update
-          sudo apt install -y git build-essential zip ccache junit4 libkrb5-dev nasm graphviz python3 python3-dev python3-setuptools qtbase5-dev libkf5coreaddons-dev libkf5i18n-dev libkf5config-dev libkf5windowsystem-dev libkf5kio-dev libqt5x11extras5-dev autoconf libcups2-dev libfontconfig1-dev gperf libxslt1-dev xsltproc libxml2-utils libxrandr-dev libx11-dev bison flex libgtk-3-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev ant ant-optional libnss3-dev libavahi-client-dev libxt-dev
-      - name: Generate config
-        run: ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format --enable-readonly-installset --disable-librelogo --without-package-format --disable-poppler --disable-scripting --disable-zxing --without-webdav --without-system-freetype --without-system-openssl --without-system-libpng --without-system-libxml --without-system-jpeg --without-system-jars --without-system-postgresql --without-junit --without-helppack-integration --disable-dconf
-      - name: Build
-        run: make
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -47,13 +40,17 @@ jobs:
             type=match,pattern=\d+\.\d+,value=${{inputs.libre-office-version}}
             type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.libre-office-version}}
             type=raw,value=${{inputs.libre-office-version}}
+          flavor: suffix=-${{inputs.image-version-suffix}},onlatest=true
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64
           context: .
           file: Dockerfile.partial
           push: true
-          platforms: linux/amd64
+          build-args: |
+            LIBRE_VERSION=${{inputs.libre-office-version}}
+            BASE=${{inputs.builder-image}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -62,22 +59,8 @@ jobs:
   build-arm64:
     name: Build and publish arm64 version
     runs-on: ubuntu-24.04-arm
-    env:
-      LIBRE_URL: https://downloadarchive.documentfoundation.org/libreoffice/old/${{inputs.libre-office-version}}/src/libreoffice-${{inputs.libre-office-version}}.tar.xz
     steps:
       - uses: actions/checkout@v4
-      - name: Download source code
-        run: wget $LIBRE_URL -O libre.tar.xz
-      - name: Extract source code
-        run: tar -xJf libre.tar.xz -C ./ --strip-components=1
-      - name: Install dependencies
-        run: | 
-          sudo apt update
-          sudo apt install -y git build-essential zip ccache junit4 libkrb5-dev nasm graphviz python3 python3-dev python3-setuptools qtbase5-dev libkf5coreaddons-dev libkf5i18n-dev libkf5config-dev libkf5windowsystem-dev libkf5kio-dev libqt5x11extras5-dev autoconf libcups2-dev libfontconfig1-dev gperf libxslt1-dev xsltproc libxml2-utils libxrandr-dev libx11-dev bison flex libgtk-3-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev ant ant-optional libnss3-dev libavahi-client-dev libxt-dev
-      - name: Generate config
-        run: ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format --enable-readonly-installset --disable-librelogo --without-package-format --disable-poppler --disable-scripting --disable-zxing --without-webdav --without-system-freetype --without-system-openssl --without-system-libpng --without-system-libxml --without-system-jpeg --without-system-jars --without-system-postgresql --without-junit --without-helppack-integration --disable-dconf
-      - name: Build
-        run: make
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -95,13 +78,17 @@ jobs:
             type=match,pattern=\d+\.\d+,value=${{inputs.libre-office-version}}
             type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.libre-office-version}}
             type=raw,value=${{inputs.libre-office-version}}
+          flavor: suffix=-${{inputs.image-version-suffix}},onlatest=true
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/arm64
           context: .
           file: Dockerfile.partial
           push: true
-          platforms: linux/arm64
+          build-args: |
+            LIBRE_VERSION=${{inputs.libre-office-version}}
+            BASE=${{inputs.builder-image}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

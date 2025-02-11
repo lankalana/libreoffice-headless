@@ -1,3 +1,20 @@
+ARG BASE=debian:latest
+
+FROM $BASE AS build
+WORKDIR /build
+ARG LIBRE_VERSION
+
+RUN apt update
+RUN apt install -y xz-utils
+ADD https://downloadarchive.documentfoundation.org/libreoffice/old/${LIBRE_VERSION}/src/libreoffice-${LIBRE_VERSION}.tar.xz libre.tar.xz
+RUN tar -xJf libre.tar.xz -C . --strip-components=1
+
+RUN apt install -y \
+	git build-essential zip ccache junit4 libkrb5-dev nasm graphviz python3 python3-dev python3-setuptools qtbase5-dev libkf5coreaddons-dev libkf5i18n-dev libkf5config-dev libkf5windowsystem-dev libkf5kio-dev libqt5x11extras5-dev autoconf libcups2-dev libfontconfig1-dev gperf libxslt1-dev xsltproc libxml2-utils libxrandr-dev libx11-dev bison flex libgtk-3-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev ant ant-optional libnss3-dev libavahi-client-dev libxt-dev
+
+RUN ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index --disable-xmlhelp --without-java --disable-postgresql-sdbc --with-galleries=no --without-system-fontconfig --with-theme="breeze_dark" --enable-release-build --enable-lto --enable-optimized=yes --without-package-format --enable-readonly-installset --disable-librelogo --without-package-format --disable-poppler --disable-scripting --disable-zxing --without-webdav --without-system-freetype --without-system-openssl --without-system-libpng --without-system-libxml --without-system-jpeg --without-junit --without-helppack-integration --disable-dconf
+
+RUN make
+
 FROM scratch
-WORKDIR /
-COPY instdir/ /libreoffice/
+COPY --from=build /build/instdir/ /libreoffice/
