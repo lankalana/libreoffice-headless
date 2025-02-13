@@ -35,10 +35,9 @@ jobs:
         with:
           images: ${{ github.repository }}
           tags: |
-            type=match,pattern=\d+,value=${{inputs.image-version}}
-            type=match,pattern=\d+\.\d+,value=${{inputs.image-version}}
-            type=match,pattern=\d+\.\d+\.\d+,value=${{inputs.image-version}}
-            type=raw,value=${{inputs.image-version}}
+            type=match,pattern=\d+[a-zA-Z0-9-_.]*,value=${{inputs.image-version}}
+            type=match,pattern=\d+\.\d+[a-zA-Z0-9-_.]*,value=${{inputs.image-version}}
+            type=match,pattern=\d+\.\d+\.\d+[a-zA-Z0-9-_.]*,value=${{inputs.image-version}}
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:

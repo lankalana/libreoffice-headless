@@ -13,9 +13,7 @@ on:
         type: string
       image-version-suffix:
         description: 'Suffix to append to the image version'
-        required: false
-        default: ''
-        type: string
+        required: true
 
 jobs:
   build-amd64:
@@ -99,5 +97,5 @@ jobs:
     needs: [build-amd64, build-arm64]
     uses: ./.github/workflows/merge.yml
     with:
-      image-version: ${{inputs.libre-office-version}}
+      image-version: ${{inputs.libre-office-version}}-${{inputs.image-version-suffix}}
     secrets: inherit
