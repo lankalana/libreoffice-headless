@@ -16,5 +16,6 @@ RUN ./autogen.sh --disable-dependency-tracking --disable-gui --disable-gdb-index
 
 RUN make
 
-FROM scratch
-COPY --from=build /build/instdir/ /libreoffice/
+FROM $BASE
+COPY --from=build /build/instdir /usr/lib/libreoffice
+RUN ln -s /usr/lib/libreoffice/program/soffice.bin /usr/bin/soffice
